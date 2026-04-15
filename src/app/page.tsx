@@ -3,6 +3,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import "./globals.css";
 
+const CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+function generateId(): string {
+  return Array.from({ length: 4 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join("");
+}
+
 // Protocol: 64 Hz tick rate, 8 samples per bit, 6 bits per symbol, MSB-first
 // Frame: [START 111111] [data symbols…] [CRC] [END 000000]
 // Bright = 1, Dark = 0
@@ -55,6 +61,21 @@ export default function Home() {
   const activeRef = useRef(false);
   const queueRef = useRef<Array<{ sequence: string; text: string; frameBits: string; frameSamples: number }>>([]);
 
+  const [id] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("id") || generateId();
+  });
+
+  useEffect(() => {
+    if (!id) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("id") !== id) {
+      url.searchParams.set("id", id);
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [id]);
+
   const pulse = useCallback((sequence: string, text: string, frameBits: string, frameSamples: number) => {
     if (activeRef.current) {
       queueRef.current.push({ sequence, text, frameBits, frameSamples });
@@ -89,10 +110,11 @@ export default function Home() {
   );
 
   useEffect(() => {
-    const es = new EventSource("/api/transmit");
+    if (!id) return;
+    const es = new EventSource(`/api/transmit?id=${id}`);
     es.onmessage = (event) => transmit(event.data);
     return () => es.close();
-  }, [transmit]);
+  }, [id, transmit]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -105,13 +127,13 @@ export default function Home() {
 
   const send = useCallback(() => {
     if (!input) return;
-    fetch("/api/transmit", {
+    fetch(`/api/transmit?id=${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: input }),
     });
     setInput("");
-  }, [input]);
+  }, [id, input]);
 
   const isBlack = bg === "black";
   const borderColor = isBlack ? "white" : "black";
@@ -143,11 +165,16 @@ export default function Home() {
           className="composerButton"
           onClick={() => {
             const offsetMs = (PAD_SAMPLES + BITS_PER_SYMBOL * SAMPLES_PER_BIT) * TICK_MS;
-            transmit(String(Math.floor((Date.now() + offsetMs) / 1000)));
+            fetch(`/api/transmit?id=${id}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: String(Math.floor((Date.now() + offsetMs) / 1000)) }),
+            });
           }}
         >
           Timestamp
         </button>
+        <span className="channelId">{id}</span>
       </div>
     </div>
   );

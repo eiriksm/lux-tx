@@ -3,16 +3,19 @@ import { addClient, removeClient, broadcast } from "./clients";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return Response.json({ error: "missing id" }, { status: 400 });
+
   let controller: ReadableStreamDefaultController;
 
   const stream = new ReadableStream({
     start(c) {
       controller = c;
-      addClient(controller);
+      addClient(id, controller);
     },
     cancel() {
-      removeClient(controller);
+      removeClient(id, controller);
     },
   });
 
@@ -26,6 +29,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return Response.json({ error: "missing id" }, { status: 400 });
+
   const body = await request.json();
   const text = body.text;
 
@@ -33,6 +39,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid text" }, { status: 400 });
   }
 
-  broadcast(text);
-  return Response.json({ ok: true, text });
+  broadcast(id, text);
+  return Response.json({ ok: true, id, text });
 }
