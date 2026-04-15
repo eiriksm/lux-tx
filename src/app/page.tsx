@@ -59,7 +59,7 @@ export default function Home() {
   const [bg, setBg] = useState<"white" | "black">("black");
   const [input, setInput] = useState("");
   const activeRef = useRef(false);
-  const queueRef = useRef<Array<{ sequence: string; text: string; frameBits: string; frameSamples: number }>>([]);
+  const queueRef = useRef<Array<{ sequence: string; text: string; frameBits: string; frameSamples: number; callbackUrl?: string }>>([]);
 
   const [id] = useState<string>(() => {
     if (typeof window === "undefined") return "";
@@ -76,9 +76,9 @@ export default function Home() {
     }
   }, [id]);
 
-  const pulse = useCallback((sequence: string, text: string, frameBits: string, frameSamples: number) => {
+  const pulse = useCallback((sequence: string, text: string, frameBits: string, frameSamples: number, callbackUrl?: string) => {
     if (activeRef.current) {
-      queueRef.current.push({ sequence, text, frameBits, frameSamples });
+      queueRef.current.push({ sequence, text, frameBits, frameSamples, callbackUrl });
       return;
     }
     activeRef.current = true;
@@ -94,17 +94,26 @@ export default function Home() {
       const elapsedMs = performance.now() - startedAt;
       const log = `transmit "${text}": ${frameSamples} samples (${(elapsedMs / 1000).toFixed(3)}s actual)\n${frameBits}`;
       console.log(log);
+
+      if (callbackUrl) {
+        fetch(callbackUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, text, response: "ack" }),
+        });
+      }
+
       const next = queueRef.current.shift();
-      if (next) pulse(next.sequence, next.text, next.frameBits, next.frameSamples);
+      if (next) pulse(next.sequence, next.text, next.frameBits, next.frameSamples, next.callbackUrl);
     }, sequence.length * TICK_MS);
-  }, []);
+  }, [id]);
 
   const transmit = useCallback(
-    (text: string) => {
+    (text: string, callbackUrl?: string) => {
       const seq = encodeMessage(text);
       const frame = seq.slice(PAD_SAMPLES, seq.length - PAD_SAMPLES);
       const bits = frame.match(/.{8}/g)!.map(s => s[0]).join("");
-      pulse(seq, text, bits, frame.length);
+      pulse(seq, text, bits, frame.length, callbackUrl);
     },
     [pulse]
   );
@@ -112,7 +121,10 @@ export default function Home() {
   useEffect(() => {
     if (!id) return;
     const es = new EventSource(`/api/transmit?id=${id}`);
-    es.onmessage = (event) => transmit(event.data);
+    es.onmessage = (event) => {
+      const { text, callbackUrl } = JSON.parse(event.data);
+      transmit(text, callbackUrl);
+    };
     return () => es.close();
   }, [id, transmit]);
 

@@ -33,12 +33,12 @@ export async function POST(request: Request) {
   if (!id) return Response.json({ error: "missing id" }, { status: 400 });
 
   const body = await request.json();
-  const text = body.text;
+  const { text, callbackUrl } = body;
 
   if (!text || typeof text !== "string") {
     return Response.json({ error: "invalid text" }, { status: 400 });
   }
 
-  broadcast(id, text);
+  broadcast(id, text, typeof callbackUrl === "string" ? callbackUrl : undefined);
   return Response.json({ ok: true, id, text });
 }

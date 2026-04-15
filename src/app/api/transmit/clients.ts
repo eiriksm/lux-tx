@@ -14,10 +14,11 @@ export function removeClient(id: string, controller: Client) {
   if (ch.size === 0) channels.delete(id);
 }
 
-export function broadcast(id: string, text: string) {
+export function broadcast(id: string, text: string, callbackUrl?: string) {
   const ch = channels.get(id);
   if (!ch) return;
+  const payload = JSON.stringify({ text, ...(callbackUrl ? { callbackUrl } : {}) });
   for (const controller of ch) {
-    controller.enqueue(`data: ${text}\n\n`);
+    controller.enqueue(`data: ${payload}\n\n`);
   }
 }
