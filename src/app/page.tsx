@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { createFeskDecoder, type FeskDecoder } from "fesk-rt";
 import "./globals.css";
 
 const CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -58,23 +59,110 @@ function encodeMessage(text: string): string {
 export default function Home() {
   const [bg, setBg] = useState<"white" | "black">("black");
   const [input, setInput] = useState("");
+  const [listenState, setListenState] = useState<"idle" | "starting" | "listening" | "error">("idle");
   const activeRef = useRef(false);
   const queueRef = useRef<Array<{ sequence: string; text: string; frameBits: string; frameSamples: number; callbackUrl?: string }>>([]);
+  const decoderRef = useRef<FeskDecoder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const listenStartingRef = useRef(false);
+  const pendingResponsesRef = useRef<Array<{ callbackUrl: string; text: string; timer: ReturnType<typeof setTimeout> }>>([]);
+  const idRef = useRef("");
 
-  const [id] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    const params = new URLSearchParams(window.location.search);
-    return params.get("id") || generateId();
-  });
+  const sendCallback = useCallback((url: string, text: string, response: string | null) => {
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: idRef.current, text, response }),
+    });
+  }, []);
+
+  const stopListening = useCallback(() => {
+    decoderRef.current?.stop().catch((err) => console.error("decoder.stop failed", err));
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    decoderRef.current = null;
+    streamRef.current = null;
+    setListenState("idle");
+  }, []);
+
+  const startListening = useCallback(async () => {
+    if (decoderRef.current || listenStartingRef.current) return;
+    listenStartingRef.current = true;
+    setListenState("starting");
+    try {
+      const decoder = createFeskDecoder({
+        workletUrl: new URL("/mb-fesk-worklet.js", window.location.origin),
+      });
+      decoder.events.on("preview", (e) => {
+        console.log("[fesk preview]", {
+          pipeline: e.pipelineKey,
+          text: e.text,
+          provisional: e.provisional,
+          crcOk: e.crcOk,
+          confidence: e.confidence,
+        });
+      });
+      decoder.events.on("frame", (e) => {
+        const result = e.result;
+        console.log("[fesk frame]", { pipeline: e.pipelineKey, label: e.label, result });
+        if (!result?.ok || !result.crcOk || !result.text) return;
+        const next = pendingResponsesRef.current.shift();
+        if (!next) return;
+        clearTimeout(next.timer);
+        sendCallback(next.callbackUrl, next.text, result.text);
+      });
+      await decoder.prepare();
+      await decoder.waitForReady();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: { exact: 1 },
+          googEchoCancellation: false,
+          googNoiseSuppression: false,
+          googAutoGainControl: false,
+          googHighpassFilter: false,
+        } as MediaTrackConstraints & {
+          googEchoCancellation?: boolean;
+          googNoiseSuppression?: boolean;
+          googAutoGainControl?: boolean;
+          googHighpassFilter?: boolean;
+        },
+      });
+      await decoder.attachStream(stream);
+      decoderRef.current = decoder;
+      streamRef.current = stream;
+      setListenState("listening");
+    } catch (err) {
+      console.error("listen failed", err);
+      setListenState("error");
+    } finally {
+      listenStartingRef.current = false;
+    }
+  }, [sendCallback]);
 
   useEffect(() => {
-    if (!id) return;
+    return () => {
+      decoderRef.current?.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      decoderRef.current = null;
+      streamRef.current = null;
+    };
+  }, []);
+
+  const [id, setId] = useState<string>("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("id") || generateId();
+    setId(next);
+    idRef.current = next;
     const url = new URL(window.location.href);
-    if (url.searchParams.get("id") !== id) {
-      url.searchParams.set("id", id);
+    if (url.searchParams.get("id") !== next) {
+      url.searchParams.set("id", next);
       window.history.replaceState({}, "", url.toString());
     }
-  }, [id]);
+  }, []);
 
   const pulse = useCallback((sequence: string, text: string, frameBits: string, frameSamples: number, callbackUrl?: string) => {
     if (activeRef.current) {
@@ -96,17 +184,23 @@ export default function Home() {
       console.log(log);
 
       if (callbackUrl) {
-        fetch(callbackUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, text, response: "ack" }),
-        });
+        const entry: { callbackUrl: string; text: string; timer: ReturnType<typeof setTimeout> } = {
+          callbackUrl,
+          text,
+          timer: setTimeout(() => {
+            const idx = pendingResponsesRef.current.indexOf(entry);
+            if (idx < 0) return;
+            pendingResponsesRef.current.splice(idx, 1);
+            sendCallback(callbackUrl, text, null);
+          }, 60_000),
+        };
+        pendingResponsesRef.current.push(entry);
       }
 
       const next = queueRef.current.shift();
       if (next) pulse(next.sequence, next.text, next.frameBits, next.frameSamples, next.callbackUrl);
     }, sequence.length * TICK_MS);
-  }, [id]);
+  }, [sendCallback]);
 
   const transmit = useCallback(
     (text: string, callbackUrl?: string) => {
@@ -185,6 +279,20 @@ export default function Home() {
           }}
         >
           Timestamp
+        </button>
+        <button
+          className="composerButton"
+          onClick={() => (listenState === "listening" ? stopListening() : startListening())}
+          disabled={listenState === "starting"}
+        >
+          <span className="listenDot" data-state={listenState} aria-hidden />
+          {listenState === "listening"
+            ? "Stop"
+            : listenState === "starting"
+              ? "Starting…"
+              : listenState === "error"
+                ? "Retry"
+                : "Listen"}
         </button>
         <span className="channelId">{id}</span>
       </div>
