@@ -1,19 +1,21 @@
 # lux-tx
 Trasmitter for the LUX light sensing protocol for second movement
 
-## Backend
+A single Symfony app: it serves the page (flashing-screen transmitter UI) and the
+`/api/transmit` SSE endpoint. State for the SSE fan-out lives in Redis pub/sub, so
+it works across multiple PHP workers/processes.
 
-The `/api/transmit` SSE endpoint is served by a Symfony app in `backend/`, using
-Redis pub/sub to fan messages out to subscribers (instead of an in-process `Map`),
-so it works across multiple PHP workers/processes.
+The frontend (`public/assets/app.js` + `app.css`) is plain JS/CSS, no build step.
+The FESK decoder (`public/assets/vendor/fesk-rt/`) is vendored from the
+[fesk-rt](https://github.com/eiriksm/fesk-rt) npm package as a self-contained ES
+module — see `LICENSE` alongside it.
 
-To run locally:
+## Running locally
 
 ```
 redis-server --daemonize yes
-cd backend && composer install
+composer install
 PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8000 -t public
 ```
 
-Then, in the repo root, `npm run dev` — `next.config.ts` rewrites `/api/transmit`
-to `BACKEND_URL` (default `http://127.0.0.1:8000`).
+Then open http://127.0.0.1:8000/.
