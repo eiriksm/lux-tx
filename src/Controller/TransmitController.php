@@ -16,6 +16,10 @@ class TransmitController
 {
     private const HEARTBEAT_INTERVAL_SECONDS = 20;
 
+    // Ids are short and guessable on purpose — that's the pairing mechanism.
+    // This only bounds their shape so they can't become arbitrary channel names.
+    private const ID_PATTERN = '/^[A-Za-z0-9]{1,64}$/';
+
     public function __construct(
         private readonly string $redisHost,
         private readonly int $redisPort,
@@ -26,8 +30,11 @@ class TransmitController
     public function subscribe(Request $request): Response
     {
         $id = $request->query->get('id');
-        if (!$id) {
+        if ($id === null || $id === '') {
             return new JsonResponse(['error' => 'missing id'], 400);
+        }
+        if (!preg_match(self::ID_PATTERN, $id)) {
+            return new JsonResponse(['error' => 'invalid id'], 400);
         }
 
         $response = new StreamedResponse(function () use ($id) {
@@ -71,8 +78,11 @@ class TransmitController
     public function publish(Request $request): JsonResponse
     {
         $id = $request->query->get('id');
-        if (!$id) {
+        if ($id === null || $id === '') {
             return new JsonResponse(['error' => 'missing id'], 400);
+        }
+        if (!preg_match(self::ID_PATTERN, $id)) {
+            return new JsonResponse(['error' => 'invalid id'], 400);
         }
 
         $body = json_decode($request->getContent(), true) ?? [];

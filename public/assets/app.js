@@ -52,16 +52,15 @@ function encodeMessage(text) {
   return "0".repeat(PAD_SAMPLES) + frame + "0".repeat(PAD_SAMPLES);
 }
 
-const screen = document.getElementById("screen");
+const flash = document.getElementById("flash");
+const composer = document.getElementById("composer");
 const input = document.getElementById("input");
-const sendBtn = document.getElementById("sendBtn");
 const timestampBtn = document.getElementById("timestampBtn");
 const listenBtn = document.getElementById("listenBtn");
 const listenDot = document.getElementById("listenDot");
 const listenLabel = document.getElementById("listenLabel");
 const channelIdEl = document.getElementById("channelId");
 
-let bg = "black";
 let listenState = "idle";
 let active = false;
 const queue = [];
@@ -71,15 +70,32 @@ let listenStarting = false;
 const pendingResponses = [];
 let currentId = "";
 
-function renderScreen() {
-  const isBlack = bg === "black";
-  screen.style.backgroundColor = bg;
-  screen.style.color = isBlack ? "white" : "black";
-  screen.style.setProperty("--border-color", isBlack ? "white" : "black");
+// The flash overlay covers the viewport only while transmitting, so the
+// composer keeps a stable, readable background the rest of the time.
+function setFlash(bit) {
+  flash.style.backgroundColor = bit === "1" ? "white" : "black";
 }
 
+function showFlash() {
+  setFlash("0");
+  flash.classList.remove("hidden");
+}
+
+function hideFlash() {
+  flash.classList.add("hidden");
+  setFlash("0");
+}
+
+// Tailwind utilities only, so the dot's per-state look lives here.
+const LISTEN_DOT_CLASSES = {
+  idle: "bg-white/35",
+  starting: "bg-yellow-400 animate-pulse",
+  listening: "bg-green-500 shadow-[0_0_0.4em_#22c55e] animate-pulse",
+  error: "bg-red-500",
+};
+
 function renderListenState() {
-  listenDot.dataset.state = listenState;
+  listenDot.className = `mr-2 h-2.5 w-2.5 rounded-full ${LISTEN_DOT_CLASSES[listenState]}`;
   listenBtn.disabled = listenState === "starting";
   listenLabel.textContent =
     listenState === "listening" ? "Stop" :
@@ -172,18 +188,15 @@ function pulse(sequence, text, frameBits, frameSamples, callbackUrl) {
   }
   active = true;
   const startedAt = performance.now();
+  showFlash();
 
   sequence.split("").forEach((bit, i) => {
-    setTimeout(() => {
-      bg = bit === "1" ? "white" : "black";
-      renderScreen();
-    }, i * TICK_MS);
+    setTimeout(() => setFlash(bit), i * TICK_MS);
   });
 
   setTimeout(() => {
     active = false;
-    bg = "black";
-    renderScreen();
+    hideFlash();
     const elapsedMs = performance.now() - startedAt;
     const log = `transmit "${text}": ${frameSamples} samples (${(elapsedMs / 1000).toFixed(3)}s actual)\n${frameBits}`;
     console.log(log);
@@ -215,7 +228,7 @@ function transmit(text, callbackUrl) {
 }
 
 function send() {
-  const text = input.value;
+  const text = input.value.trim();
   if (!text) return;
   fetch(`/api/transmit?id=${currentId}`, {
     method: "POST",
@@ -225,9 +238,15 @@ function send() {
   input.value = "";
 }
 
-sendBtn.addEventListener("click", send);
+composer.addEventListener("submit", (e) => {
+  e.preventDefault();
+  send();
+});
+
 input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") send();
+  if (e.key !== "Enter" || e.shiftKey) return;
+  e.preventDefault();
+  send();
 });
 
 timestampBtn.addEventListener("click", () => {
@@ -245,7 +264,7 @@ listenBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("keydown", (e) => {
-  if (e.target instanceof HTMLInputElement) return;
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
   if (e.key === "h") transmit("hi");
 });
 
@@ -260,7 +279,7 @@ window.addEventListener("keydown", (e) => {
   }
   channelIdEl.textContent = currentId;
 
-  renderScreen();
+  hideFlash();
   renderListenState();
 
   const es = new EventSource(`/api/transmit?id=${currentId}`);
