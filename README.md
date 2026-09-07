@@ -1,2 +1,3 @@
 # lux-tx
-Trasmitter for the LUX light sensing protocol for second movement
+
+Transmitter for the LUX light sensing protocol for second movement

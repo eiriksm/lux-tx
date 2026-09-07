@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: web02
+    timeout-minutes: 20
+    env:
+      SERVER: ${{ secrets.SERVER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+
+    steps:
+      - name: Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -o BatchMode=yes "$SERVER" "DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'REMOTE'
+          ${{ secrets.DEPLOY_SCRIPT }}
+          REMOTE
