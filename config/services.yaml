@@ -15,6 +15,7 @@ services:
         bind:
             string $redisHost: '%app.redis_host%'
             int $redisPort: '%app.redis_port%'
+            string $deployHash: '%app.deploy_hash%'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

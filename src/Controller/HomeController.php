@@ -9,6 +9,11 @@ use Symfony\Component\Routing\Attribute\Route;
 #[AsController]
 class HomeController
 {
+    public function __construct(
+        private readonly string $deployHash,
+    ) {
+    }
+
     #[Route('/', name: 'home', methods: ['GET'])]
     public function index(): Response
     {
@@ -61,6 +66,8 @@ class HomeController
       class="flex items-center justify-center px-2 font-mono text-base tracking-[0.15em] opacity-50 select-all sm:text-xl"
     ></span>
   </div>
+
+  <footer class="text-center font-mono text-xs tracking-[0.15em] opacity-30 select-all">{{deploy_hash}}</footer>
 </form>
 
 <!-- The transmit flash owns the whole viewport, so the UI never strobes with it. -->
@@ -69,6 +76,12 @@ class HomeController
 </body>
 </html>
 HTML;
+
+        $html = str_replace(
+            '{{deploy_hash}}',
+            htmlspecialchars($this->deployHash, ENT_QUOTES, 'UTF-8'),
+            $html,
+        );
 
         return new Response($html);
     }

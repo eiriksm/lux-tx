@@ -11,3 +11,5 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
+
+/.hash
