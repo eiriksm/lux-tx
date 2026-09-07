@@ -1,0 +1,5 @@
+@import "tailwindcss" source(none);
+
+/* Classes live in the PHP-rendered markup and in the transmitter JS. */
+@source "../src/**/*.php";
+@source "../public/assets/app.js";
