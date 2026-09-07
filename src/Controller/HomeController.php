@@ -11,6 +11,7 @@ class HomeController
 {
     public function __construct(
         private readonly string $deployHash,
+        private readonly string $assetVersion,
     ) {
     }
 
@@ -24,7 +25,7 @@ class HomeController
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lux-tx</title>
-<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/app.css?v={{asset_version}}">
 </head>
 <body class="bg-black text-white antialiased">
 <!-- Mobile first: full-height column, textarea takes the room that's left. -->
@@ -72,16 +73,15 @@ class HomeController
 
 <!-- The transmit flash owns the whole viewport, so the UI never strobes with it. -->
 <div id="flash" aria-hidden="true" class="fixed inset-0 z-10 hidden bg-black"></div>
-<script type="module" src="/assets/app.js"></script>
+<script type="module" src="/assets/app.js?v={{asset_version}}"></script>
 </body>
 </html>
 HTML;
 
-        $html = str_replace(
-            '{{deploy_hash}}',
-            htmlspecialchars($this->deployHash, ENT_QUOTES, 'UTF-8'),
-            $html,
-        );
+        $html = strtr($html, [
+            '{{deploy_hash}}' => htmlspecialchars($this->deployHash, ENT_QUOTES, 'UTF-8'),
+            '{{asset_version}}' => rawurlencode($this->assetVersion),
+        ]);
 
         return new Response($html);
     }
