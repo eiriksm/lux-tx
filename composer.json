@@ -70,6 +70,28 @@
         "symfony": {
             "allow-contrib": false,
             "require": "7.3.*"
+        },
+        "violinist": {
+            "bundled_packages": {
+                "symfony/framework-bundle": [
+                    "symfony/browser-kit",
+                    "symfony/console",
+                    "symfony/css-selector",
+                    "symfony/dotenv",
+                    "symfony/flex",
+                    "symfony/runtime",
+                    "symfony/yaml"
+                ]
+            },
+            "blocklist": [
+                "symfony/browser-kit",
+                "symfony/console",
+                "symfony/css-selector",
+                "symfony/dotenv",
+                "symfony/flex",
+                "symfony/runtime",
+                "symfony/yaml"
+            ]
         }
     }
 }
