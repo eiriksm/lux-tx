@@ -12,7 +12,7 @@
         "symfony/dotenv": "7.2.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "7.2.*",
-        "symfony/runtime": "7.2.*",
+        "symfony/runtime": "v7.4.14",
         "symfony/yaml": "7.2.*"
     },
     "config": {
