@@ -13,3 +13,8 @@
 ###< symfony/framework-bundle ###
 
 /.hash
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
