@@ -30,8 +30,21 @@ jobs:
           extensions: redis
           coverage: none
 
-      - name: Install dependencies
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist
+
+      - name: Install Node dependencies and build assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install Playwright browsers
+        run: vendor/bin/playwright-install --with-deps
 
       - name: Run tests
         run: php bin/phpunit

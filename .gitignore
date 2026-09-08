@@ -18,3 +18,6 @@
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+
+# Screenshots/traces Playwright captures for failing browser tests
+/test-failures/
