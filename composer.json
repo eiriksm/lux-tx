@@ -9,7 +9,7 @@
         "ext-iconv": "*",
         "ext-redis": "*",
         "symfony/console": "^7.4.18",
-        "symfony/dotenv": "^7.3",
+        "symfony/dotenv": "^7.3.0",
         "symfony/flex": "^2.11",
         "symfony/framework-bundle": "^7.3",
         "symfony/runtime": "^7.3",
@@ -69,7 +69,7 @@
     "extra": {
         "symfony": {
             "allow-contrib": false,
-            "require": "7.3.*"
+            "require": "^7.3"
         },
         "violinist": {
             "bundled_packages": {
