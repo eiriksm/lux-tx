@@ -113,6 +113,23 @@ class TransmitFlowTest extends PlaywrightTestCase
         $this->assertStringContainsString('bg-red-500', (string) $this->getPage()->locator('#listenDot')->getAttribute('class'));
     }
 
+    public function testTorchModeFallsBackToScreenWithoutCameraAccess(): void
+    {
+        $this->getPage()->addInitScript(self::STUB_EVENT_SOURCE);
+        $this->visit('/?id=fixedid');
+
+        $this->assertSame('Screen', $this->getPage()->locator('#modeLabel')->textContent());
+        $this->click('#modeBtn');
+
+        $this->getPage()->waitForFunction(
+            "() => document.getElementById('modeLabel').textContent === 'No torch'",
+            null,
+            ['timeout' => 5000],
+        );
+        $this->assertStringContainsString('bg-red-500', (string) $this->getPage()->locator('#modeDot')->getAttribute('class'));
+        $this->assertSame('false', $this->getPage()->locator('#modeBtn')->getAttribute('aria-pressed'));
+    }
+
     public function testReceivingAMessageFlashesAndRestoresTheOverlay(): void
     {
         $this->getPage()->addInitScript(self::STUB_EVENT_SOURCE);
