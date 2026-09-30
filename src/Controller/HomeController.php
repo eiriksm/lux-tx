@@ -62,6 +62,14 @@ class HomeController
     >
       <span id="listenDot" aria-hidden="true" class="mr-2 h-2.5 w-2.5 rounded-full bg-white/35"></span><span id="listenLabel">Listen</span>
     </button>
+    <button
+      id="modeBtn"
+      type="button"
+      aria-pressed="false"
+      class="flex min-h-14 cursor-pointer items-center justify-center rounded-none border-2 border-white bg-transparent px-4 py-3 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-default disabled:opacity-50 sm:flex-1 sm:text-xl"
+    >
+      <span id="modeDot" aria-hidden="true" class="mr-2 h-2.5 w-2.5 rounded-full bg-white/35"></span><span id="modeLabel">Screen</span>
+    </button>
     <span
       id="channelId"
       class="flex items-center justify-center px-2 font-mono text-base tracking-[0.15em] opacity-50 select-all sm:text-xl"

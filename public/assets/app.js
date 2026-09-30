@@ -60,6 +60,9 @@ const listenBtn = document.getElementById("listenBtn");
 const listenDot = document.getElementById("listenDot");
 const listenLabel = document.getElementById("listenLabel");
 const channelIdEl = document.getElementById("channelId");
+const modeBtn = document.getElementById("modeBtn");
+const modeDot = document.getElementById("modeDot");
+const modeLabel = document.getElementById("modeLabel");
 
 let listenState = "idle";
 let active = false;
@@ -70,20 +73,103 @@ let listenStarting = false;
 const pendingResponses = [];
 let currentId = "";
 
+// Output mode: "screen" flashes the viewport, "torch" drives the camera's
+// flashlight instead (Android Chrome; iOS Safari doesn't expose torch).
+let outputMode = "screen";
+let modeState = "idle"; // idle | starting | error
+let torchTrack = null;
+let torchOn = false;
+
 // The flash overlay covers the viewport only while transmitting, so the
 // composer keeps a stable, readable background the rest of the time.
 function setFlash(bit) {
+  if (outputMode === "torch") {
+    setTorch(bit === "1");
+    return;
+  }
   flash.style.backgroundColor = bit === "1" ? "white" : "black";
 }
 
 function showFlash() {
   setFlash("0");
-  flash.classList.remove("hidden");
+  if (outputMode === "screen") flash.classList.remove("hidden");
 }
 
 function hideFlash() {
   flash.classList.add("hidden");
   setFlash("0");
+}
+
+// setFlash runs every tick but the level only changes on bit boundaries, so
+// only hit applyConstraints on an actual edge to keep the camera pipeline quiet.
+function setTorch(on) {
+  if (!torchTrack || on === torchOn) return;
+  torchOn = on;
+  torchTrack
+    .applyConstraints({ advanced: [{ torch: on }] })
+    .catch((err) => console.error("torch toggle failed", err));
+}
+
+const MODE_DOT_CLASSES = {
+  screen: "bg-white/35",
+  starting: "bg-yellow-400 animate-pulse",
+  torch: "bg-amber-300 shadow-[0_0_0.4em_#fcd34d]",
+  error: "bg-red-500",
+};
+
+function renderMode() {
+  const look = modeState === "idle" ? outputMode : modeState;
+  modeDot.className = `mr-2 h-2.5 w-2.5 rounded-full ${MODE_DOT_CLASSES[look]}`;
+  modeBtn.disabled = modeState === "starting" || active;
+  modeBtn.setAttribute("aria-pressed", String(outputMode === "torch"));
+  modeLabel.textContent =
+    modeState === "starting" ? "Starting…" :
+    modeState === "error" ? "No torch" :
+    outputMode === "torch" ? "Torch" : "Screen";
+}
+
+function releaseTorch() {
+  torchTrack?.stop();
+  torchTrack = null;
+  torchOn = false;
+}
+
+function useScreen() {
+  releaseTorch();
+  outputMode = "screen";
+  modeState = "idle";
+  renderMode();
+}
+
+async function useTorch() {
+  modeState = "starting";
+  renderMode();
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+    });
+    const [track] = stream.getVideoTracks();
+    if (!track?.getCapabilities?.().torch) {
+      stream.getTracks().forEach((t) => t.stop());
+      throw new Error("torch not supported on this camera");
+    }
+    // The OS can yank the camera (backgrounding, another app); fall back
+    // to the screen rather than silently transmitting nothing.
+    track.addEventListener("ended", () => {
+      if (torchTrack === track) useScreen();
+    });
+    torchTrack = track;
+    torchOn = false;
+    await track.applyConstraints({ advanced: [{ torch: false }] });
+    outputMode = "torch";
+    modeState = "idle";
+  } catch (err) {
+    console.error("torch unavailable", err);
+    releaseTorch();
+    outputMode = "screen";
+    modeState = "error";
+  }
+  renderMode();
 }
 
 // Tailwind utilities only, so the dot's per-state look lives here.
@@ -106,6 +192,7 @@ function renderListenState() {
 function setListenState(next) {
   listenState = next;
   renderListenState();
+  renderMode();
 }
 
 function sendCallback(url, text, response) {
@@ -177,6 +264,7 @@ async function startListening() {
 }
 
 window.addEventListener("beforeunload", () => {
+  releaseTorch();
   decoder?.stop();
   mediaStream?.getTracks().forEach((t) => t.stop());
 });
@@ -187,6 +275,7 @@ function pulse(sequence, text, frameBits, frameSamples, callbackUrl) {
     return;
   }
   active = true;
+  renderMode();
   const startedAt = performance.now();
   showFlash();
 
@@ -197,6 +286,7 @@ function pulse(sequence, text, frameBits, frameSamples, callbackUrl) {
   setTimeout(() => {
     active = false;
     hideFlash();
+    renderMode();
     const elapsedMs = performance.now() - startedAt;
     const log = `transmit "${text}": ${frameSamples} samples (${(elapsedMs / 1000).toFixed(3)}s actual)\n${frameBits}`;
     console.log(log);
@@ -261,6 +351,13 @@ timestampBtn.addEventListener("click", () => {
 listenBtn.addEventListener("click", () => {
   if (listenState === "listening") stopListening();
   else startListening();
+});
+
+// Switching mid-frame would split one message across two emitters, so the
+// button is disabled while a transmission is running.
+modeBtn.addEventListener("click", () => {
+  if (outputMode === "torch") useScreen();
+  else useTorch();
 });
 
 window.addEventListener("keydown", (e) => {
