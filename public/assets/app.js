@@ -36,6 +36,33 @@ const CHAR_TO_SYMBOL = (() => {
   return table;
 })();
 
+// Text with anything the symbol table can't carry (accents, emoji, other
+// scripts…) would lose those characters, so it's sent as unpadded RFC 4648
+// base32 of its UTF-8 bytes instead. The alphabet is lowercased to stay
+// clear of the dedicated "A"/"B" symbols; the receiver's fesk-rt
+// tryDecodeBase32Text() decodes case-insensitively.
+const BASE32_ALPHABET = "abcdefghijklmnopqrstuvwxyz234567";
+
+function base32Encode(text) {
+  let out = "";
+  let buffer = 0;
+  let bits = 0;
+  for (const byte of new TextEncoder().encode(text)) {
+    buffer = (buffer << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += BASE32_ALPHABET[(buffer >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += BASE32_ALPHABET[(buffer << (5 - bits)) & 31];
+  return out;
+}
+
+function toWireText(text) {
+  return Array.from(text).every((c) => CHAR_TO_SYMBOL.has(c)) ? text : base32Encode(text);
+}
+
 function symbolToBits(sym) {
   return Array.from({ length: BITS_PER_SYMBOL }, (_, i) => (sym >> (BITS_PER_SYMBOL - 1 - i)) & 1)
     .map((bit) => bit.toString().repeat(SAMPLES_PER_BIT))
@@ -288,7 +315,9 @@ function pulse(sequence, text, frameBits, frameSamples, callbackUrl) {
     hideFlash();
     renderMode();
     const elapsedMs = performance.now() - startedAt;
-    const log = `transmit "${text}": ${frameSamples} samples (${(elapsedMs / 1000).toFixed(3)}s actual)\n${frameBits}`;
+    const wireText = toWireText(text);
+    const encoded = wireText === text ? "" : ` as base32 "${wireText}"`;
+    const log = `transmit "${text}"${encoded}: ${frameSamples} samples (${(elapsedMs / 1000).toFixed(3)}s actual)\n${frameBits}`;
     console.log(log);
 
     if (callbackUrl) {
@@ -311,7 +340,7 @@ function pulse(sequence, text, frameBits, frameSamples, callbackUrl) {
 }
 
 function transmit(text, callbackUrl) {
-  const seq = encodeMessage(text);
+  const seq = encodeMessage(toWireText(text));
   const frame = seq.slice(PAD_SAMPLES, seq.length - PAD_SAMPLES);
   const bits = frame.match(/.{8}/g).map((s) => s[0]).join("");
   pulse(seq, text, bits, frame.length, callbackUrl);
