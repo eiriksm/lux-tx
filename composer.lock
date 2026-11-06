@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "01c7dd350f4e103501b87de4c0066d61",
+    "content-hash": "6b968f492d96f3efdfc886bf6a1d06f3",
     "packages": [
         {
             "name": "psr/cache",
@@ -206,7 +206,8 @@
             "support": {
                 "source": "https://github.com/php-fig/log/tree/3.0.2"
             },
-            "time": "2024-09-11T13:17:53+00:00"
+            "time": "2024-09-11T13:17:53+00:00",
+            "published-time": "2024-09-11T13:21:14+00:00"
         },
         {
             "name": "symfony/cache",
@@ -3322,16 +3323,16 @@
         },
         {
             "name": "playwright-php/playwright",
-            "version": "v1.5.0",
+            "version": "v1.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/playwright-php/playwright.git",
-                "reference": "8492788afdb920dcb04ec89bddeb3c4e93d3b5e2"
+                "reference": "1745e3a55b44f58972a707e5c93bd357e4c8c2be"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/playwright-php/playwright/zipball/8492788afdb920dcb04ec89bddeb3c4e93d3b5e2",
-                "reference": "8492788afdb920dcb04ec89bddeb3c4e93d3b5e2",
+                "url": "https://api.github.com/repos/playwright-php/playwright/zipball/1745e3a55b44f58972a707e5c93bd357e4c8c2be",
+                "reference": "1745e3a55b44f58972a707e5c93bd357e4c8c2be",
                 "shasum": ""
             },
             "require": {
@@ -3398,7 +3399,7 @@
             ],
             "support": {
                 "issues": "https://github.com/playwright-php/playwright/issues",
-                "source": "https://github.com/playwright-php/playwright/tree/v1.5.0"
+                "source": "https://github.com/playwright-php/playwright/tree/v1.5.1"
             },
             "funding": [
                 {
@@ -3406,7 +3407,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-20T12:54:18+00:00"
+            "time": "2026-11-06T20:59:51+00:00",
+            "published-time": "2026-11-06T21:01:08+00:00"
         },
         {
             "name": "playwright-php/playwright-symfony",
@@ -3537,7 +3539,8 @@
                 "issues": "https://github.com/php-fig/clock/issues",
                 "source": "https://github.com/php-fig/clock/tree/1.0.0"
             },
-            "time": "2022-11-25T14:36:26+00:00"
+            "time": "2022-11-25T14:36:26+00:00",
+            "published-time": "2022-11-25T14:59:22+00:00"
         },
         {
             "name": "sebastian/cli-parser",
@@ -4913,16 +4916,16 @@
         },
         {
             "name": "symfony/process",
-            "version": "v7.4.19",
+            "version": "v7.4.22",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/process.git",
-                "reference": "ed0ae095b86994d370d5791612e55984f15aa30e"
+                "reference": "a5a6912edbbfc4c98cd080bc4bbe37c8e7eeb20a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/process/zipball/ed0ae095b86994d370d5791612e55984f15aa30e",
-                "reference": "ed0ae095b86994d370d5791612e55984f15aa30e",
+                "url": "https://api.github.com/repos/symfony/process/zipball/a5a6912edbbfc4c98cd080bc4bbe37c8e7eeb20a",
+                "reference": "a5a6912edbbfc4c98cd080bc4bbe37c8e7eeb20a",
                 "shasum": ""
             },
             "require": {
@@ -4954,7 +4957,7 @@
             "description": "Executes commands in sub-processes",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/process/tree/v7.4.19"
+                "source": "https://github.com/symfony/process/tree/v7.4.22"
             },
             "funding": [
                 {
@@ -4974,7 +4977,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-02T12:38:34+00:00"
+            "time": "2026-10-25T14:40:16+00:00",
+            "published-time": "2026-10-28T18:21:18+00:00"
         },
         {
             "name": "theseer/tokenizer",
@@ -5039,5 +5043,5 @@
         "ext-redis": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }
