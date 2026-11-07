@@ -6,11 +6,11 @@ function generateId() {
   return Array.from({ length: 4 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join("");
 }
 
-// Protocol: 128 Hz tick rate, 4 samples per bit, 6 bits per symbol, MSB-first
+// Protocol: 128 Hz tick rate, 8 samples per bit, 6 bits per symbol, MSB-first
 // Frame: [START 111111] [data symbols…] [CRC] [END 000000]
 // Bright = 1, Dark = 0
 const TICK_MS = 1000 / 128; // 7.8125 ms per tick
-const SAMPLES_PER_BIT = 4; // 4 ticks per bit → 31.25 ms per bit
+const SAMPLES_PER_BIT = 8; // 8 ticks per bit → 62.5 ms per bit
 const BITS_PER_SYMBOL = 6;
 const START = 0b111111;
 const END = 0b000000;
