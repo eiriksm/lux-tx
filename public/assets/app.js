@@ -6,15 +6,15 @@ function generateId() {
   return Array.from({ length: 4 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join("");
 }
 
-// Protocol: 64 Hz tick rate, 8 samples per bit, 6 bits per symbol, MSB-first
+// Protocol: 128 Hz tick rate, 4 samples per bit, 6 bits per symbol, MSB-first
 // Frame: [START 111111] [data symbols…] [CRC] [END 000000]
 // Bright = 1, Dark = 0
-const TICK_MS = 1000 / 64; // 15.625 ms per tick
-const SAMPLES_PER_BIT = 8; // 8 ticks per bit → 125 ms per bit
+const TICK_MS = 1000 / 128; // 7.8125 ms per tick
+const SAMPLES_PER_BIT = 4; // 4 ticks per bit → 31.25 ms per bit
 const BITS_PER_SYMBOL = 6;
 const START = 0b111111;
 const END = 0b000000;
-const PAD_SAMPLES = 12;
+const PAD_SAMPLES = 24; // 187.5 ms of dark lead-in/out
 
 const SYMBOLS = [
   "",
@@ -342,7 +342,7 @@ function pulse(sequence, text, frameBits, frameSamples, callbackUrl) {
 function transmit(text, callbackUrl) {
   const seq = encodeMessage(toWireText(text));
   const frame = seq.slice(PAD_SAMPLES, seq.length - PAD_SAMPLES);
-  const bits = frame.match(/.{8}/g).map((s) => s[0]).join("");
+  const bits = frame.match(new RegExp(`.{${SAMPLES_PER_BIT}}`, "g")).map((s) => s[0]).join("");
   pulse(seq, text, bits, frame.length, callbackUrl);
 }
 
